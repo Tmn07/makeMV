@@ -1,12 +1,20 @@
 import argparse
 import re
 import subprocess
+import os
 from os import makedirs
 
 import json
 import requests
 
-from utils import print_byformat, to1080P
+from utils import print_byformat, to1080P, isImage
+
+
+# TODO：重构代码，异常捕获 尝试最佳实践。分阶段、分异常类型进行捕获或者抛出自定义错误类型，在全局上捕获？
+
+# python.exe makeMV.py 1971659505
+# python.exe makeMV.py 1971659505 -p F:/Dev/MakeMV/result/test/2-tenka_p_ssr6_f.png
+# python.exe makeMV.py 1971659505 -p F:/Dev/MakeMV/result/test
 
 parser = argparse.ArgumentParser(description='欢迎使用全自动MV生成脚本beta版', add_help=False)
 parser.add_argument("-h", "--help", action="help", help="查看帮助信息")
@@ -38,7 +46,8 @@ makedirs(base_dir, exist_ok=True)
 # base_dir = mid+"/"
 
 # 下载album封面
-# TODO: 不支持jpeg?
+pictrue_flag = 0 # 单张图片
+pictrue_list = []
 if not args.picture:
     try:
         album_pic = info['songs'][0]['album']['picUrl']
@@ -50,21 +59,42 @@ if not args.picture:
             f.write(r.content)
         print(f'download album picture {pic_name}')
         origin_pic = pic_name
-
+        to1080P(origin_pic, pic_name)
+        print('change picture to 1080P')
     except Exception as e:
         print('no album_pic')
 else:
-    origin_pic = args.picture
-    pic_name = base_dir + 'cover.jpg'
-    # pic_name = args.picture
+    if os.path.exists(args.picture):
+        if os.path.isfile(args.picture): # 输入单张图片
+            # TODO 判断单张图片类型 捕获异常
+            origin_pic = args.picture
+            pic_name = base_dir + 'cover.jpg'
+            to1080P(origin_pic, pic_name)
+            print('change picture to 1080P')
+        elif os.path.isdir(args.picture): # 输入为路径时，遍历该路径下图片
+            pictrue_flag = 1 # 多张图片
+            pic_path = args.picture
+            num = 1
+            for file in os.listdir(pic_path):
+                if isImage(file):
+                    origin_pic = pic_path+'/'+file
+                    pic_name = base_dir + f'cover{num}.jpg'
+                    to1080P(origin_pic, pic_name)
+                    pictrue_list.append(pic_name)
+                    num += 1
+                    print(f'change {file} to {pic_name}')
+            pic_name = base_dir + 'cover%01d.jpg'
+    else:
+        print('图片路径不对')
+        exit(0)
 
 
-to1080P(origin_pic, pic_name)
-print('change picture to 1080P')
+
+
 
 # 下载音频
 # TODO：如何获取320K的音频
-# TODO: 有些歌无法下载，提供错误信息
+# TODO: 有些歌无法下载，提供错误信息 如4954431
 download_url = f"http://music.163.com/song/media/outer/url?id={mid}.mp3"
 music_file = base_dir + f'{music_name}.mp3'
 r = requests.get(download_url)
@@ -141,7 +171,6 @@ for line in data.split('\n'):
 
 
 # 生成ass字幕
-# TODO：平移时间轴
 # music_ass = f'{music_name}.ass'
 music_ass = base_dir + f'music.ass'
 f = open('ass_template.txt')
@@ -150,15 +179,17 @@ f.close()
 
 times.sort()
 num = 0
+st_list = []
+et_list = []
+content_list = []
+num_type_list = []
 with open(music_ass, 'w', encoding='utf-8') as f:
     f.write(ass_header)
     pretime = times[0]
-    # for ind in range(1,len(times)):
     for ind in range(1, len(times) + 1):
         num += 1
         num_type = "odd" if num % 2 == 1 else "even"
         start_time = pretime[1:-2]
-        # f2.write(str(ind) + "\n")
         # 用于处理最后一条歌词信息
         if ind == len(times):
             end_time = final_time
@@ -168,26 +199,83 @@ with open(music_ass, 'w', encoding='utf-8') as f:
         content = result[times[ind - 1]]
 
         line = f"Dialogue: 0,0:{start_time},0:{end_time},{num_type},,0,0,0,,{content}\n"
-        # print(line)
+        st_list.append(start_time)
+        et_list.append(end_time)
+        content_list.append(content)
+        num_type_list.append(num_type)
         f.write(line)
 
-    # lrc
-    # for t in times:
-    #     f.write(t + result[t] + "\n")
+# 处理时间轴
+from utils import forwardTime, backwardTime
+for ind in range(len(st_list)-1, 0, -1):
+    st = st_list[ind-1]
+    et = et_list[ind-1]
+    st_list[ind] = forwardTime(st, et)
+    et_list[ind] = backwardTime(et_list[ind])
 
+process_music_ass = base_dir + f'process_music.ass'
+with open(process_music_ass, 'w', encoding='utf-8') as f:
+    f.write(ass_header)
+    for i in range(len(st_list)):
+        start_time = st_list[i]
+        end_time = et_list[i]
+        num_type = num_type_list[i]
+        content = content_list[i]
+        line = f"Dialogue: 0,0:{start_time},0:{end_time},{num_type},,0,0,0,,{content}\n"
+        f.write(line)
+
+
+print(f'generate {process_music_ass}')
 print(f'generate {music_ass}')
-# print('please run the command next line to make MV')
-# # TODO：更高效率的制作一图流视频，如何制作多图循环视频
-# print(f'ffmpeg -r 30 -f image2 -loop 1 -i tenka_p_ssr6_f.png -i "{music_file}" -s 1920x1080 -t {video_time} -vcodec libx264 -acodec copy -b:a 128K  -y xxx.mp4')
-# print(f'ffmpeg -i xxx.mp4 -vf "ass={music_ass}" result.mp4')
+music_ass = process_music_ass
 
+
+# TODO：更高效率的制作一图流视频，视频帧率不用那么高？
 mv_file = base_dir + music_name + '.mp4'
-# cmd = f'ffmpeg -r 30 -f image2 -loop 1 -i "{pic_name}" -i "{music_file}" -s 1920x1080 -t {video_time} -vcodec libx264 -acodec copy -b:a 128K -vf "ass={music_ass}" -y "{mv_file}" '
-cmd = f'ffmpeg -r 30 -f image2 -loop 1 -i "{pic_name}" -i "{music_file}" -s 1920x1080 -t {video_time} -vcodec libx264 -acodec copy -b:a 128K -vf "ass={music_ass}" -y "{mv_file}" -v quiet -stats'
+
+
+
+if pictrue_flag==0:
+    cmd = f'ffmpeg -r 30 -f image2 -loop 1 -i "{pic_name}" -i "{music_file}" -s 1920x1080 -t {video_time} -vcodec libx264 -acodec copy -b:a 128K -vf "ass={music_ass}" -y "{mv_file}" -v quiet -stats'
+else:
+    # 不渐变
+    tmp_file = base_dir + 'slide' + '.mp4'
+    # cmd0 = f'ffmpeg -r 0.1 -f image2 -loop 1 -i "{pic_name}" -i "{music_file}" -r 30 -s 1920x1080 -t {video_time} -vcodec libx264 -acodec copy -b:a 128K -y "{tmp_file}" -v quiet -stats'
+    # print('now running this command')
+    # print(cmd0)
+    # subprocess.run(cmd0)
+    # cmd = f'ffmpeg -i {tmp_file} -vf "ass={music_ass}" -y "{mv_file}" -v quiet -stats'
+
+    # 生成渐变视频片段
+    cmd0 = 'ffmpeg.exe '
+    cmd_list = []
+    for num, pic_name in enumerate(pictrue_list):
+        cmd0 += f'-loop 1 -t 10 -i {pic_name} '
+        cmd_list.append(f'[{num}:v]fade=t=in:st=0:d=1,fade=t=out:st=9:d=1[v{num}]; ')
+    cmd0 += '-filter_complex "'
+    cmd_ = ''
+    for num in range(len(cmd_list)):
+        cmd0 += cmd_list[num]
+        cmd_ += f'[v{num}]'
+    cmd0 += cmd_
+    cmd0 += f'concat=n={num+1}:v=1:a=0,format=yuv420p[v]" -map "[v]" -y "{tmp_file}" -v quiet -stats'
+    print('now running this command')
+    print(cmd0)
+    subprocess.run(cmd0)
+
+    cmd = f'ffmpeg.exe -stream_loop -1 -i "{tmp_file}" -i  "{music_file}" -t {video_time} -vf "ass={music_ass}" -y "{mv_file}" -v quiet -stats'
+    # 'ffmpeg.exe \
+    # -stream_loop -1 -i slide.mp4 \
+    # -i "1971659505/Give me some more....mp3" \
+    # -vf "ass=1971659505/music.ass" \
+    # -shortest -map 0:v:0 -map 1:a:0 \
+    # -y tmp.mp4
+    # '
+
+
 print('now running this command')
 print(cmd)
 
-# TODO：异常处理?
 try:
     subprocess.run(cmd)
     content = f'Congratulations! Now get your MV in {mv_file}'

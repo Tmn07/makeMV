@@ -4,16 +4,22 @@
 利用音乐平台的歌与歌词轴，指定图片或使用默认专辑封面生成MV，主要用于纯K投屏。
 （因为纯K投网易云音乐时，会没有歌词。。）
 
+MV效果如 [BILI](https://www.bilibili.com/video/BV1wv4y1o7JT)
+
+
 使用方法参考下图：
-![](pic/intro.png)
+![img.png](pic/intro.png)
+
 
 ```shell
 python makeMV.py -h
 
-python makeMV.py 1971659505
+python.exe makeMV.py 1971659505
 
 # windows下路径需要注意
-python makeMV.py 1988508925 -p F:/Dev/lrc2srt/cover.jpg
+python.exe makeMV.py 1971659505 -p F:/Dev/MakeMV/result/test/2-tenka_p_ssr6_f.png
+
+python.exe makeMV.py 1971659505 -p F:/Dev/MakeMV/result/test
 ```
 
 
@@ -26,12 +32,13 @@ requests
 
 ## TODO
 代码中备注的TODO为需要优化的点，主要有以下几点以及未来其他可能做的事
-- [ ] 平移时间轴（歌词提早显示和延迟结束）
+- [x] 平移时间轴（歌词提早显示和延迟结束）
 - [ ] 获取更高码率的音频、手动指定音频？
-- [ ] 支持多图切换显示
+- [x] 支持多图切换显示
 - [ ] 打包发行，减少对用户环境需求？
 
 ![img.png](pic/todo.png)
+
 
 ## 其他
 

@@ -1,5 +1,5 @@
 from PIL import Image
-
+from datetime import datetime, timedelta
 
 # TODO: 日文字符不等距..
 def print_byformat(content):
@@ -8,6 +8,31 @@ def print_byformat(content):
     print(content)
     print("└" + (len(content) - 2) * '─' + "┘")
 
+
+def forwardTime(st, et):
+    # 在上一行歌词中一半时显示
+    # et = "0:00:02.10"
+    # st = "0:00:03.60"
+    et = datetime.strptime(et, '%M:%S.%f')
+    st = datetime.strptime(st, '%M:%S.%f')
+    next_st = et + (st - et) / 2
+    next_st = next_st.strftime('%M:%S.%f')[1:-4]
+    return next_st
+
+def backwardTime(et):
+    # 显示延迟3毫秒
+    # et = "00:02.10"
+    et = datetime.strptime(et, '%M:%S.%f')
+    delay = timedelta(microseconds=300000)
+    next_et = et + delay
+    next_et = next_et.strftime('%M:%S.%f')[1:-4]
+    return next_et
+def isImage(pic_file:str):
+    format = ['jpg', 'jpeg', 'png', 'JPG', 'JPEG', 'PNG']
+    for ext in format:
+        if pic_file.endswith(ext):
+            return 1
+    return 0
 
 def pad_image(image, target_size):
     """
