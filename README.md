@@ -9,7 +9,7 @@ MV效果如 [BILI](https://www.bilibili.com/video/BV1wv4y1o7JT)
 
 使用方法参考下图：
 
-直接使用二进制版本 查看release页面
+直接使用二进制版本 查看release页面 或 直接下载[makeMV.exe](https://github.com/Tmn07/makeMV/releases/download/beta.3/makeMV.exe)
 ![](pic/bin.png)
 
 或者源代码
