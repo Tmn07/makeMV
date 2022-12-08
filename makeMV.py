@@ -2,19 +2,30 @@ import argparse
 import re
 import subprocess
 import os
+import sys
 from os import makedirs
-
 import json
 import requests
 
 from utils import print_byformat, to1080P, isImage
 
+# build
+# pyinstaller.exe -F --add-data "./ffmpeg/*;./ffmpeg/" makeMV.py
+
+# test
+# python.exe makeMV.py 1992431933
+# python.exe makeMV.py 2004994198 -p F:/Dev/MakeMV/result/cover.jpg
+# python.exe makeMV.py 1971659505 -p F:/Dev/MakeMV/result/givemesomemore
+# makeMV.exe 1992431933
+
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
+ffmpeg_exe = resource_path("./ffmpeg/ffmpeg.exe")
 
 # TODO：重构代码，异常捕获 尝试最佳实践。分阶段、分异常类型进行捕获或者抛出自定义错误类型，在全局上捕获？
-
-# python.exe makeMV.py 1971659505
-# python.exe makeMV.py 1971659505 -p F:/Dev/MakeMV/result/test/2-tenka_p_ssr6_f.png
-# python.exe makeMV.py 1971659505 -p F:/Dev/MakeMV/result/test
 
 parser = argparse.ArgumentParser(description='欢迎使用全自动MV生成脚本beta版', add_help=False)
 parser.add_argument("-h", "--help", action="help", help="查看帮助信息")
@@ -105,7 +116,7 @@ with open(music_file, 'wb') as f:
 
 # 获取长度
 def get_length(music_file):
-    process = subprocess.Popen(['ffmpeg', '-i', music_file], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    process = subprocess.Popen([ffmpeg_exe, '-i', music_file], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     stdout, stderr = process.communicate()
     result = re.findall("Duration:.*?,", str(stdout))[0]
     return result[13:-1]
@@ -123,6 +134,10 @@ r = requests.get(lrc_url, headers=http_header)
 jsondata = json.loads(r.text)
 
 with open(music_lrc, 'w', encoding='utf-8') as f:
+    # 有些歌词里只有作曲信息..
+    if jsondata['lrc']['lyric'] == "":
+        print("指定曲目未有歌词")
+        exit(0)
     f.write(jsondata['lrc']['lyric'])
     # if jsondata['tlyric'].get('lyric'):
     #     f.write(jsondata['tlyric']['lyric'])
@@ -205,6 +220,8 @@ with open(music_ass, 'w', encoding='utf-8') as f:
         num_type_list.append(num_type)
         f.write(line)
 
+print(f'generate {music_ass}')
+
 # 处理时间轴
 from utils import forwardTime, backwardTime
 for ind in range(len(st_list)-1, 0, -1):
@@ -224,9 +241,8 @@ with open(process_music_ass, 'w', encoding='utf-8') as f:
         line = f"Dialogue: 0,0:{start_time},0:{end_time},{num_type},,0,0,0,,{content}\n"
         f.write(line)
 
-
 print(f'generate {process_music_ass}')
-print(f'generate {music_ass}')
+
 music_ass = process_music_ass
 
 
@@ -236,7 +252,7 @@ mv_file = base_dir + music_name + '.mp4'
 
 
 if pictrue_flag==0:
-    cmd = f'ffmpeg -r 30 -f image2 -loop 1 -i "{pic_name}" -i "{music_file}" -s 1920x1080 -t {video_time} -vcodec libx264 -acodec copy -b:a 128K -vf "ass={music_ass}" -y "{mv_file}" -v quiet -stats'
+    cmd = f'{ffmpeg_exe} -r 30 -f image2 -loop 1 -i "{pic_name}" -i "{music_file}" -s 1920x1080 -t {video_time} -vcodec libx264 -acodec copy -b:a 128K -vf "ass={music_ass}" -y "{mv_file}" -v quiet -stats'
 else:
     # 不渐变
     tmp_file = base_dir + 'slide' + '.mp4'
@@ -247,7 +263,7 @@ else:
     # cmd = f'ffmpeg -i {tmp_file} -vf "ass={music_ass}" -y "{mv_file}" -v quiet -stats'
 
     # 生成渐变视频片段
-    cmd0 = 'ffmpeg.exe '
+    cmd0 = f'{ffmpeg_exe} '
     cmd_list = []
     for num, pic_name in enumerate(pictrue_list):
         cmd0 += f'-loop 1 -t 10 -i {pic_name} '
@@ -263,7 +279,7 @@ else:
     print(cmd0)
     subprocess.run(cmd0)
 
-    cmd = f'ffmpeg.exe -stream_loop -1 -i "{tmp_file}" -i  "{music_file}" -t {video_time} -vf "ass={music_ass}" -y "{mv_file}" -v quiet -stats'
+    cmd = f'{ffmpeg_exe} -stream_loop -1 -i "{tmp_file}" -i  "{music_file}" -t {video_time} -vf "ass={music_ass}" -y "{mv_file}" -v quiet -stats'
     # 'ffmpeg.exe \
     # -stream_loop -1 -i slide.mp4 \
     # -i "1971659505/Give me some more....mp3" \

@@ -2,4 +2,17 @@
 __pycache__/*
 result/*
 .idea/*
+
+# test data
 1971659505/*
+1992431933/*
+2004994198/*
+
+
+
+
+# about bundle
+ffmpeg/*
+build/*
+dist/*
+*.spec
