@@ -10,7 +10,7 @@ import requests
 from utils import print_byformat, to1080P, isImage
 
 # build
-# pyinstaller.exe -F --add-data "./ffmpeg/*;./ffmpeg/" makeMV.py
+# pyinstaller.exe -F --add-data "./tools/*;./tools/" makeMV.py
 
 # test
 # python.exe makeMV.py 1992431933
@@ -23,7 +23,9 @@ def resource_path(relative_path):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
 
-ffmpeg_exe = resource_path("./ffmpeg/ffmpeg.exe")
+ffmpeg_exe = resource_path("./tools/ffmpeg.exe")
+ass_template = resource_path("./tools/ass_template.txt")
+
 
 # TODO：重构代码，异常捕获 尝试最佳实践。分阶段、分异常类型进行捕获或者抛出自定义错误类型，在全局上捕获？
 
@@ -188,7 +190,7 @@ for line in data.split('\n'):
 # 生成ass字幕
 # music_ass = f'{music_name}.ass'
 music_ass = base_dir + f'music.ass'
-f = open('ass_template.txt')
+f = open(ass_template)
 ass_header = f.read()
 f.close()
 

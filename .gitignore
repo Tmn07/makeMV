@@ -12,7 +12,7 @@ result/*
 
 
 # about bundle
-ffmpeg/*
+tools/ffmpeg.exe
 build/*
 dist/*
 *.spec

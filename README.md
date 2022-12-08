@@ -60,7 +60,7 @@ pip install requests Pillow
 # 安装pyinstaller
 pip install pyinstaller
 # 打包成单个可执行文件
-pyinstaller.exe -F --add-data "./ffmpeg/*;./ffmpeg/" --add-data "./ass_template.txt;./ass_template.txt"  makeMV.py
+pyinstaller.exe -F --add-data "./tools/*;./tools/" makeMV.py
 ```
 
 将ffmpeg打包的方法参考[stackoverflow](https://stackoverflow.com/questions/56370173/how-to-export-ffmpeg-into-my-python-program)
